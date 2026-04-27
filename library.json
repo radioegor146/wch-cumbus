@@ -1,0 +1,26 @@
+{
+  "name": "WCH-CumBus",
+  "version": "0.0.1",
+  "description": "Simple CumBus library for WCH MCUs",
+  "keywords": "ch32, ch32v, wch, modbus, cumbus",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/radioegor146/wch-cumbus"
+  },
+  "authors": [
+    {
+      "name": "Egor Koleda",
+      "email": "radioegor146@ctf.by",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": [
+    "noneos-sdk"
+  ],
+  "platforms": [
+    "ch32v"
+  ],
+  "dependencies": {
+  }
+}
