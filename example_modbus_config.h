@@ -6,6 +6,13 @@
 // USART configuration
 #define MODBUS_UART USART1
 #define MODBUS_SPEED 115200
+
+// Unique device ID in CumBus
+// Used to program any slave ID to bus by doing WRITE_SINGLE_REGISTER to slave ID 255
+// with register address as new slave address and this UNIQUE_ID as register value 
+// Example:
+//   uvx --from modbus-cli modbus -b 115200 -P n -p 1 -s 255 /dev/tty.usbserial-1140 h@230=0x5120 
+//   # sets slave ID to 230 for device with UNIQUE_ID=0x5120
 #define MODBUS_UNIQUE_ID 0x1234
 
 // RS485 pins configuration
