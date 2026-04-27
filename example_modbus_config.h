@@ -6,7 +6,7 @@
 // USART configuration
 #define MODBUS_UART USART1
 #define MODBUS_SPEED 115200
-#define MODBUS_SLAVE_ID 231
+#define MODBUS_UNIQUE_ID 0x1234
 
 // RS485 pins configuration
 #define TX_PORT GPIOD

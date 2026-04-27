@@ -8,6 +8,45 @@
 #define FRAME_DELAY (SystemCoreClock / 8000000 * 1750)
 #define CHARACTER_DELAY (SystemCoreClock / 8000000 * 750)
 
+#define OB_RDPR_ADDR (OB_BASE + 0x00)
+#define OB_USER_ADDR (OB_BASE + 0x02)
+#define OB_DATA0_ADDR (OB_BASE + 0x04)
+#define OB_DATA1_ADDR (OB_BASE + 0x06)
+#define OB_WRPR0_ADDR (OB_BASE + 0x08)
+#define OB_WRPR1_ADDR (OB_BASE + 0x0A)
+
+#define MODBUS_DEFAULT_ADDR 1
+
+static uint8_t ModbusGetSlaveAddress(void) {
+  uint8_t addr = *(__IO uint8_t*)OB_DATA0_ADDR;
+
+  if (addr < 1 || addr > 247) {
+    return MODBUS_DEFAULT_ADDR;
+  }
+
+  return addr;
+}
+
+static void ModbusSetSlaveAddress(uint8_t addr) {
+  uint8_t rdpr = *(__IO uint8_t*)OB_RDPR_ADDR;
+  uint8_t user = *(__IO uint8_t*)OB_USER_ADDR;
+  uint8_t data1 = *(__IO uint8_t*)OB_DATA1_ADDR;
+  uint8_t wrpr0 = *(__IO uint8_t*)OB_WRPR0_ADDR;
+  uint8_t wrpr1 = *(__IO uint8_t*)OB_WRPR1_ADDR;
+
+  FLASH_Unlock();
+  FLASH_EraseOptionBytes();
+
+  FLASH_ProgramOptionByteData(OB_RDPR_ADDR, rdpr);
+  FLASH_ProgramOptionByteData(OB_USER_ADDR, user);
+  FLASH_ProgramOptionByteData(OB_DATA0_ADDR, addr);
+  FLASH_ProgramOptionByteData(OB_DATA1_ADDR, data1);
+  FLASH_ProgramOptionByteData(OB_WRPR0_ADDR, wrpr0);
+  FLASH_ProgramOptionByteData(OB_WRPR1_ADDR, wrpr1);
+
+  FLASH_Lock();
+}
+
 static void ModbusStartSysTimer(uint32_t cmp_value) {
   SysTick->CTLR &= ~1;
   SysTick->SR &= ~1;
@@ -174,20 +213,23 @@ static void ModbusSendPacket(const uint8_t* data, uint8_t length) {
 }
 
 static void ModbusSendException(uint8_t function, uint8_t exception_code) {
-  uint8_t response[3] = {MODBUS_SLAVE_ID, function | 0x80, exception_code};
+  uint8_t response[3] = {ModbusGetSlaveAddress(), function | 0x80,
+                         exception_code};
   ModbusSendPacket(response, sizeof(response));
 }
 
 static void ModbusSendReadDiscreteInputsResponse(uint8_t* data, uint8_t bytes) {
   uint8_t response[1 + 1 + 1 + (READ_DISCRETE_INPUTS_SIZE + 7) / 8] = {
-      MODBUS_SLAVE_ID, MODBUS_PACKET_FUNCTION_CODE_READ_DISCRETE_INPUTS, bytes};
+      ModbusGetSlaveAddress(), MODBUS_PACKET_FUNCTION_CODE_READ_DISCRETE_INPUTS,
+      bytes};
   memcpy(response + 3, data, bytes);
   ModbusSendPacket(response, 1 + 1 + 1 + bytes);
 }
 
-static void ModbusSendReadInputRegistersResponse(uint8_t count, uint16_t* registers) {
+static void ModbusSendReadInputRegistersResponse(uint8_t count,
+                                                 uint16_t* registers) {
   uint8_t response[1 + 1 + 1 + READ_INPUT_REGISTERS_SIZE * 2] = {
-      MODBUS_SLAVE_ID, MODBUS_PACKET_FUNCTION_CODE_READ_INPUT_REGISTERS,
+      ModbusGetSlaveAddress(), MODBUS_PACKET_FUNCTION_CODE_READ_INPUT_REGISTERS,
       count * 2};
   for (uint8_t i = 0; i < count; i++) {
     response[1 + 1 + 1 + i * 2] = registers[i] >> 8;
@@ -196,41 +238,52 @@ static void ModbusSendReadInputRegistersResponse(uint8_t count, uint16_t* regist
   ModbusSendPacket(response, sizeof(response));
 }
 
-static void ModbusSendWriteSingleCoilResponse(uint16_t address, uint16_t value) {
-  uint8_t response[6] = {
-      MODBUS_SLAVE_ID, MODBUS_PACKET_FUNCTION_CODE_WRITE_SINGLE_COIL,
-      address >> 8,    address & 0xFF,
-      value >> 8,      value & 0xFF};
+static void ModbusSendWriteSingleCoilResponse(uint16_t address,
+                                              uint16_t value) {
+  uint8_t response[6] = {ModbusGetSlaveAddress(),
+                         MODBUS_PACKET_FUNCTION_CODE_WRITE_SINGLE_COIL,
+                         address >> 8,
+                         address & 0xFF,
+                         value >> 8,
+                         value & 0xFF};
   ModbusSendPacket(response, sizeof(response));
 }
 
-static void ModbusSendWriteMultipleCoilsResponse(uint16_t address, uint16_t number) {
-  uint8_t response[6] = {
-      MODBUS_SLAVE_ID, MODBUS_PACKET_FUNCTION_CODE_WRITE_MULTIPLE_COILS,
-      address >> 8,    address & 0xFF,
-      number >> 8,     number & 0xFF};
+static void ModbusSendWriteMultipleCoilsResponse(uint16_t address,
+                                                 uint16_t number) {
+  uint8_t response[6] = {ModbusGetSlaveAddress(),
+                         MODBUS_PACKET_FUNCTION_CODE_WRITE_MULTIPLE_COILS,
+                         address >> 8,
+                         address & 0xFF,
+                         number >> 8,
+                         number & 0xFF};
   ModbusSendPacket(response, sizeof(response));
 }
 
-static void ModbusSendWriteSingleRegisterResponse(uint16_t address, uint16_t value) {
-  uint8_t response[6] = {
-      MODBUS_SLAVE_ID, MODBUS_PACKET_FUNCTION_CODE_WRITE_SINGLE_REGISTER,
-      address >> 8,    address & 0xFF,
-      value >> 8,      value & 0xFF};
+static void ModbusSendWriteSingleRegisterResponse(uint16_t address,
+                                                  uint16_t value) {
+  uint8_t response[6] = {ModbusGetSlaveAddress(),
+                         MODBUS_PACKET_FUNCTION_CODE_WRITE_SINGLE_REGISTER,
+                         address >> 8,
+                         address & 0xFF,
+                         value >> 8,
+                         value & 0xFF};
   ModbusSendPacket(response, sizeof(response));
 }
 
 static void ModbusSendWriteMultipleRegistersResponse(uint16_t address,
-                                              uint16_t number) {
-  uint8_t response[6] = {
-      MODBUS_SLAVE_ID, MODBUS_PACKET_FUNCTION_CODE_WRITE_MULTIPLE_REGISTERS,
-      address >> 8,    address & 0xFF,
-      number >> 8,     number & 0xFF};
+                                                     uint16_t number) {
+  uint8_t response[6] = {ModbusGetSlaveAddress(),
+                         MODBUS_PACKET_FUNCTION_CODE_WRITE_MULTIPLE_REGISTERS,
+                         address >> 8,
+                         address & 0xFF,
+                         number >> 8,
+                         number & 0xFF};
   ModbusSendPacket(response, sizeof(response));
 }
 
-static void GPIOInitPin(GPIO_TypeDef* gpio, uint16_t pin, GPIOSpeed_TypeDef speed,
-                 GPIOMode_TypeDef mode) {
+static void GPIOInitPin(GPIO_TypeDef* gpio, uint16_t pin,
+                        GPIOSpeed_TypeDef speed, GPIOMode_TypeDef mode) {
   GPIO_InitTypeDef init = {0};
   init.GPIO_Pin = pin;
   init.GPIO_Speed = speed;
@@ -291,7 +344,7 @@ void ModbusProcess() {
     case MODBUS_READ_ERROR_WRONG_CRC:
       return;
     case MODBUS_READ_ERROR_UNSUPPORTED_PACKET:
-      if (packet.slave_id == MODBUS_SLAVE_ID) {
+      if (packet.slave_id == ModbusGetSlaveAddress()) {
         ModbusSendException(packet.function,
                             MODBUS_EXCEPTION_CODE_ILLEGAL_FUNCTION);
       }
@@ -300,7 +353,18 @@ void ModbusProcess() {
       break;
   }
 
-  if (packet.slave_id != MODBUS_SLAVE_ID) {
+  if (packet.slave_id == 0xFF &&
+      packet.function == MODBUS_PACKET_FUNCTION_CODE_WRITE_SINGLE_REGISTER &&
+      packet.write_single_register_data.value == MODBUS_UNIQUE_DEVICE_ID) {
+    ModbusSetSlaveAddress((uint8_t)packet.write_single_register_data.address);
+
+    ModbusSendWriteSingleRegisterResponse(
+        packet.write_single_register_data.address,
+        packet.write_single_register_data.value);
+    return;
+  }
+
+  if (packet.slave_id != ModbusGetSlaveAddress()) {
     return;
   }
 
