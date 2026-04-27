@@ -3,7 +3,7 @@
 #include <ch32v00x.h>
 #include <string.h>
 
-#include "modbus_config.h"
+#include <modbus_config.h>
 
 #define FRAME_DELAY (SystemCoreClock / 8000000 * 1750)
 #define CHARACTER_DELAY (SystemCoreClock / 8000000 * 750)
