@@ -51,3 +51,14 @@ int main(void) {
   }
 }
 ```
+
+Example's `platformio.ini`:
+```ini
+[env:ch32v003f4p6]
+platform = https://github.com/Community-PIO-CH32V/platform-ch32v.git
+board = genericCH32V003F4P6
+framework = noneos-sdk
+upload_protocol = wch-link
+lib_deps = https://github.com/radioegor146/wch-cumbus.git@0.0.2
+build_flags = -Iinclude
+```
