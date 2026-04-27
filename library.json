@@ -1,6 +1,6 @@
 {
   "name": "WCH-CumBus",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simple CumBus library for WCH MCUs",
   "keywords": "ch32, ch32v, wch, modbus, cumbus",
   "repository": {
